@@ -4,8 +4,9 @@ from map import rooms
 from player import *
 from items import *
 from gameparser import *
+import sys
 
-
+win = 0
 
 def list_of_items(items):
     """This function takes a list of items (see items.py for the definition) and
@@ -75,9 +76,11 @@ def print_inventory_items(items):
 
     """
     inventory = list_of_items(items)
-    inventory += ".\n"
     if len(inventory) > 0:
+        inventory += ".\n"
         print("You have",inventory)
+    elif len(inventory) == 0:
+        print("You have nothing.\n")
 
 
 def print_room(room):
@@ -206,7 +209,8 @@ def print_menu(exits, room_items, inv_items):
         print("TAKE " + item["id"].upper() + " to take " + item["name"] + ".")
     for item in inv_items:
         print("DROP " + item["id"].upper() + " to drop your " + item["name"] + ".")
-    
+    for item in inv_items:
+        print("EAT " + item["id"].upper() + " to eat your " + item["name"] + ".")
     print("What do you want to do?")
 
 
@@ -236,27 +240,36 @@ def execute_go(direction):
     moving). Otherwise, it prints "You cannot go there."
     """
     global current_room
-    print(current_room["exits"])
     if is_valid_exit(current_room["exits"], direction) == True:
         current_room = rooms[(current_room["exits"])[direction]]
     else:
         print("You cannot go there.")
 
 
-def execute_take(item_id):
+def execute_take(item_id, inventory_mass):
     """This function takes an item_id as an argument and moves this item from the
     list of items in the current room to the player's inventory. However, if
     there is no such item in the room, this function prints
     "You cannot take that."
     """
-    item = items[item_id]
-    inventory.append(item)
-    for x in rooms[current_room["items"]]:
-        if item in rooms[current_room["items"]]:
-            del rooms[current_room["items"]][x]
-            break
-        else:
-            x += 1
+    try:
+        item = items[item_id]
+        index = 0
+        taken = 0
+        for x in current_room["items"]:
+            if x == item and (inventory_mass + item["mass"]) < 3:
+                del current_room["items"][index]
+                inventory.append(item)
+                taken = 1
+                break
+            else:
+                index += 1
+        if taken == 0 and (inventory_mass + item["mass"]) > 3:
+            print("You cannot carry anything else. Maybe Strength shouldn't have been your dump stat...")
+        elif taken ==0:
+            print("You cannot take that.")
+    except Exception as e:
+        print("You cannot take that.")
             
     
 
@@ -265,10 +278,46 @@ def execute_drop(item_id):
     player's inventory to list of items in the current room. However, if there is
     no such item in the inventory, this function prints "You cannot drop that."
     """
-    pass
+    try:
+        item = items[item_id]
+        index = 0
+        dropped = 0
+        for x in inventory:
+            if x == item:
+                del inventory[index]
+                current_room["items"].append(item)
+                dropped = 1
+                break
+            else:
+                index += 1
+        if dropped == 0:
+            print("You cannot drop that.")
+    except Exception as e:
+        print("You cannot drop that.")
+
+        
+def execute_eat(item_id):
+    # The command used to win. You have to eat everything to win.
+    global win
+    try:
+        item = items[item_id]
+        index = 0
+        eaten = 0
+        for x in inventory:
+            if x == item:
+                del inventory[index]
+                eaten = 1
+                win += 1
+                break
+            else:
+                index += 1
+        if eaten == 0:
+            print("You cannot eat that.")
+    except Exception as e:
+        print("You cannot eat that.")
     
 
-def execute_command(command):
+def execute_command(command, inventory_mass):
     """This function takes a command (a list of words as returned by
     normalise_input) and, depending on the type of action (the first word of
     the command: "go", "take", or "drop"), executes either execute_go,
@@ -287,7 +336,7 @@ def execute_command(command):
 
     elif command[0] == "take":
         if len(command) > 1:
-            execute_take(command[1])
+            execute_take(command[1], inventory_mass)
         else:
             print("Take what?")
 
@@ -296,6 +345,12 @@ def execute_command(command):
             execute_drop(command[1])
         else:
             print("Drop what?")
+            
+    elif command[0] == "eat":
+        if len(command) > 1:
+            execute_eat(command[1])
+        else:
+            print("Eat what?")
 
     else:
         print("This makes no sense.")
@@ -338,20 +393,34 @@ def move(exits, direction):
     # Next room to go to
     return rooms[exits[direction]]
 
+def carry_mass(mass):
+    for x in inventory:
+        mass += x["mass"]
+    return mass
+
+def win_check(win):
+    if win == 6:
+        print("You win! You might need a Gaviscon though...")
+        sys.exit()
+        
+
 
 # This is the entry point of our program
 def main():
     # Main game loop
     while True:
         # Display game status (room description, inventory etc.)
+        win_check(win)
+        inventory_mass = 0
         print_room(current_room)
         print_inventory_items(inventory)
+        inventory_mass = carry_mass(inventory_mass)
 
         # Show the menu with possible actions and ask the player
         command = menu(current_room["exits"], current_room["items"], inventory)
 
         # Execute the player's command
-        execute_command(command)
+        execute_command(command, inventory_mass)
 
 
 
