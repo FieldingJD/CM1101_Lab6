@@ -266,7 +266,7 @@ def execute_take(item_id, inventory_mass):
             else:
                 index += 1
         if taken == 0 and (inventory_mass + item["mass"]) > 3:
-            print("You cannot carry anything else. Maybe Strength shouldn't have been your dump stat...")
+            print("You cannot carry anything else.\nMaybe Strength shouldn't have been your dump stat...")
         elif taken ==0:
             print("You cannot take that.")
     except Exception as e:
@@ -401,7 +401,7 @@ def carry_mass(mass):
 
 def win_check(win):
     if win == 6:
-        print("You win! You might need a Gaviscon though...")
+        print("Congratulations! You gave yourself indigestion!")
         sys.exit()
         
 
